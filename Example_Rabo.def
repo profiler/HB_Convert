@@ -2,7 +2,7 @@
 ### Column
 ### [1] = (H) Homebank field pos.       !! >>> do NOT change <<<
 ### [2] =     Homebank field name       !! >>> do NOT change <<<
-### [3] = (B) Bankfile field pos.       !! field-number [0-N], unused with [-1]
+### [3] = (B) Bankfile field pos.       !! field-number = [0-N], does-not-exist = [-1]
 ### [4] =     Bankfile field name       !! as in Bank-file
 ### [5] =     Bankfile field details    !! NO semicolons allowed
 ### --------------------------------------------------------------------------   Examples:

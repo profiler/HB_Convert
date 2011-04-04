@@ -49,10 +49,12 @@ class CsvConvert:
                 hb.append(int(d[0]))
                 ip.append(int(d[2]))
 
+        print hb
+        print ip
         # parse import.csv
         n = 0                                   # (import line counter)
         imp_eof = False
-        header  = False
+        acc_old = ''
         while not imp_eof:
             n += 1                              # line count
             line = fromfile_.readline()
@@ -83,13 +85,6 @@ class CsvConvert:
                 else:                    
                     rec[i] = rec[i].strip('"')
 
-            # header indicating new account (multi accounts import)
-            # format: account-number; "Homebank account-name" [For now unknown '']
-            if header == False:
-                print '%s;%s'% (rec[hb[0]],'')
-                tofile_.write('%s;%s\n'% (rec[hb[0]],''))
-                header = True
-
             if (len(hb)>=len(rec)):
                 CsvConvert.fail = n                     # Error => Store record-/line-number
                 logfile_.write('Error in record[%s]: Field(s) missing\n'% n)
@@ -98,18 +93,20 @@ class CsvConvert:
                 # Assemble Homebank records
                 hb_old  = 0
                 record  = ''
+                am = ''
                 for j in range(len(hb)):
                     h = hb[j]        
                     b = ip[j]
                     rec_new = rec[b]
                     
-                    # "date" conversion
+                    # conversions
+                    # "date"
                     if h == 0:                        
                         dd = date.find('DD')
                         mm = date.find('MM')
                         yy = date.find('YYYY')
                         rec_new = '%s-%s-%s'% (rec[b][dd:(dd+2)],rec[b][mm:(mm+2)],rec[b][yy:(yy+4)])
-                    # "paycode" conversion
+                    # "paycode"
                     if (code != '') and (h == 1):
                         k = 0
                         cd = code.split(',')
@@ -117,15 +114,11 @@ class CsvConvert:
                         for c in cd:
                             if c == rec[b]:     rec_new = cd[k + offset]
                             k += 1
-                    # "amount" conversion
-                    if (posneg != '') and (h == 5):
-                        # Sign
+                    # "amount"
+                    if (h == 5):
                         rec_new = ''
-                        pn = posneg.split(',')
-                        if   rec[b] == pn[0]:   rec_new = '-%s'% am
-                        elif rec[b] == pn[1]:   rec_new = am
                         # Amount
-                        else:
+                        if (am == ''):
                             am = rec[b]
                             # integers(any number).fraction(0..2) 
                             # find decimal point
@@ -146,24 +139,69 @@ class CsvConvert:
                                 am = am.replace(',','')
                                 am = am.replace('.','')
                                 am = '%s.00'% am
-                           
-                    # Init (first) Bank-field
-                    if (j == 0):
-                        record = rec_new
-                        hb_old = h
-                    # Combine multiple description(h:4) "not empty" Bank-records
-                    elif (hb_old == h) and (h == 4):
-                        if (len(rec_new) != 0):
-                            record = '%s_%s'% (record,rec_new)
-                    # Single "not empty" Bank-record
-                    elif (rec_new != '') and (h < 7):
-                        hb_old = h
-                        record = '%s;%s'% (record,rec_new)
-                    # Single "empty" Bank-record
-                    elif h == 6:
-                        hb_old = h
-                        record = '%s;%s'% (record,rec_new)
+                        # Sign
+                        if (posneg != ''):
+                            pn = posneg.split(',')
+                            if   rec[b] == pn[0]:   rec_new = '-%s'% am
+                            elif rec[b] == pn[1]:   rec_new = am
+                        else:
+                            rec_new = am
 
+                    # assemble output-record
+                    # skip if import.csv does not have this field: [-1]
+                    if (ip[j] != -1):
+                        # date
+                        if (h == 0):
+                            record = rec_new
+                        # paymode    
+                        elif (h == 1):
+                            record = '%s;%s'% (record,rec_new)
+                        # info (offset-account)
+                        elif (h == 2):
+                            if (len(rec_new) != 0) and (int(rec_new) > 0):
+                                record = '%s;%s'% (record,rec_new)
+                            else:
+                                record = '%s;'% record
+                        # payee
+                        elif (h == 3):
+                            record = '%s;%s'% (record,rec_new)
+                        # description
+                        elif (h == 4):
+                            # Combine multiple "not empty" description Bank-records
+                            if (hb_old == h):
+                                if (len(rec_new) != 0):
+                                    record = '%s_%s'% (record,rec_new)
+                                else:
+                                    pass
+                            # First description Bank-record
+                            else:
+                                hb_old = h
+                                if (len(rec_new) != 0):
+                                    record = '%s;%s'% (record,rec_new)
+                                # empty
+                                else:
+                                    record = '%s;'%  record
+                        # amount
+                        elif (h == 5):
+                            if (len(rec_new) != 0):
+                                record = '%s;%s'% (record,rec_new)
+                            else:
+                                pass
+                        # category
+                        elif (h == 6):
+                            record = '%s;%s'% (record,rec_new)
+                        # NOT IMPLEMENTED IN HOMEBANK
+                        # acc_old indicating new account (multi accounts import)
+                        # format: account-number; "Homebank account-name" [For now unknown '']
+                        elif (h == 7):
+                            if (rec_new != acc_old):
+                                print rec_new
+                                tofile_.write('%s;%s\n'% (rec_new,''))
+                                acc_old = rec_new
+                                
+                    elif (h < 7):
+                        record = '%s;'% record          # -> empty field
+                        
                 print record
                 tofile_.write('%s\n'% record)
                 
@@ -175,7 +213,7 @@ class convert:
     # 2- Convert via definition-file 
     # 3- what is csv-separator comma, semicolon ?
     # 4- Skip "corrupted" bank-file records
-    # 5- include header with account number in output.csv
+    # 5- include acc_old with account number in output.csv
     # 6- Log all conversion process-items
       
     def __init__(self):
