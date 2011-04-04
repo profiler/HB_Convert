@@ -1,0 +1,10 @@
+First attempt creating a universal Homebank csv import converter.
+
+In terminal on command-line type ./convert.py [import.csv] [output.csv] [import.def]
+
+                 [import.csv] = ("bank".csv)    file exported from bank
+                 [output.csv] = (homebank.csv)  file to be created
+                 [import.def] = ("bank".def)    definition-file "bank" <> "Homebank"
+                 logging conversion process -> log.txt
+
+Format import-csv-file homebank = ['date','paymode','info','payee','description','amount','category']
