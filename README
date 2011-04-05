@@ -1,4 +1,4 @@
-First attempt creating a universal Homebank csv import converter (c) Ton van Twuyver / 4-04-2011
+First attempt creating a universal Homebank csv import converter (c)Ton 4-04-2011
 ================================================================================================
 Before you can use this script, you have to create a definition-file (see short manual below)
 Format import-csv-file-record homebank  = ['date','paymode','info','payee','description','amount','category']
