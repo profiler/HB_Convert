@@ -36,8 +36,8 @@ class CsvConvert:
             def_line = def_line.rstrip('\n')
             d = def_line.split(';')
             # line valid ?
-            if (len(d) == 5) and (d[2].rstrip() !=''):
-                # Extract Details for 
+            if (len(d) == 5) and (d[2].rstrip() != ''):
+                # Extract Details for: 
                 # Date
                 if  int(d[0]) == 0:     date = d[4]
                 # PayCode
@@ -51,10 +51,15 @@ class CsvConvert:
 
         print hb
         print ip
+        
         # parse import.csv
         n = 0                                   # (import line counter)
         imp_eof = False
         acc_old = ''
+        bank = {                                # All known accounts
+        '0123456789':'Bank1',
+        '0987654321':'Bank2'
+        }
         while not imp_eof:
             n += 1                              # line count
             line = fromfile_.readline()
@@ -142,10 +147,9 @@ class CsvConvert:
                         # Sign
                         if (posneg != ''):
                             pn = posneg.split(',')
-                            if   rec[b] == pn[0]:   rec_new = '-%s'% am
-                            elif rec[b] == pn[1]:   rec_new = am
-                        else:
-                            rec_new = am
+                            if   rec[b] == pn[0]:   am = '-%s'% am
+                            elif rec[b] == pn[1]:   pass
+                        rec_new = am
 
                     # assemble output-record
                     # skip if import.csv does not have this field: [-1]
@@ -191,13 +195,26 @@ class CsvConvert:
                         elif (h == 6):
                             record = '%s;%s'% (record,rec_new)
                         # NOT IMPLEMENTED IN HOMEBANK
-                        # acc_old indicating new account (multi accounts import)
-                        # format: account-number; "Homebank account-name" [For now unknown '']
+                        #       acc_old indicating new account (multi accounts import)
+                        #       format: account-number; "Homebank account-name"
                         elif (h == 7):
+                            # make banknumber 10 char.long
+                            if len(rec_new) < 10:
+                                rec_new = (10 - len(rec_new))*'0' + rec_new
+                            # detect next account
                             if (rec_new != acc_old):
-                                print rec_new
-                                tofile_.write('%s;%s\n'% (rec_new,''))
                                 acc_old = rec_new
+                                print rec_new,
+                                try:
+                                    print bank[rec_new]
+                                    tofile_.write('%s;%s\n'% (rec_new,bank[rec_new]))
+                                except KeyError:
+                                    print 'Unknown/New account number'
+                                    tofile_.write('%s;%s\n'% (rec_new,'New_account'))
+                        # NOT IMPLEMENTED IN HOMEBANK
+                        #       Balance before/after transaction ?
+                        elif (h == 8):
+                            print float(rec_new) + float(am)
                                 
                     elif (h < 7):
                         record = '%s;'% record          # -> empty field
