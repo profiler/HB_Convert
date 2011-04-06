@@ -2,7 +2,7 @@ First attempt creating a universal Homebank csv import converter (c)Ton 4-04-201
 ================================================================================================
 Before you can use this script, you have to create a definition-file (see short manual below)
 Format import-csv-file-record homebank  = ['date','paymode','info','payee','description','amount','category']
-Format import-csv-file-record bank      = [any number of fields & field-position-record]
+Format import-csv-file-record bank      = [any number of fields & field-position in record]
 Record field seperation-token can be comma or semicolon [,.]
 
 In terminal on command-line type ./convert.py [import.csv] [output.csv] [import.def]
