@@ -50,7 +50,7 @@ Example-definition-file:
 H  <Homebank>    B    <"Bank">        <Bank-file>
 #___<field>___________<field>_______<field-details>_________________________________________
 0;date          ;2 ;Curr.date      ;YYYYMMDD
-1;paymode       ;8 ;Booking-Code   ;ga,gb,cb,sb,tb,ba,ck,eb,ei,ma,nb,bg,ac,id,tg,kh,db,3,3,4,4,5,6,6,7,7,7,7,8,8,8,8,9,10
+1;paymode       ;8 ;Booking-Code   ;ga,gb,cb,sb,tb,ba,ck,eb,ei,ma,nb,bg,ac,id,3,3,4,4,5,6,6,7,7,7,7,8,8,8
 2;info          ;5 ;Offset-account ;
 3;payee         ;6 ;Payee          ;
 4;description   ;10;Description.1  ;
