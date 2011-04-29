@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  Copyright (c)2010 Ton van Twuyver @ <profiler1234@gmail.com>
+#  Copyright (c)Ton van Twuyver @ <profiler1234@gmail.com>          Last updated 29-04-2011
 #
 #  This script is written with "HomeBank" in mind. <http://homebank.free.fr>
 #  Purpose:    to convert any Bank-file.csv in Homebank.csv by means of a definition-file.
@@ -24,7 +24,7 @@ class CsvConvert:
     """ reads and converts [import.csv] with [definition.def] rules """
     
     def __init__(self, fromfile_, deffile_, tofile_, logfile_):
-        # read definition-file
+        # read definition-file and create conversion-lists
         def_eof = False
         hb      = []    # homebank conversion-list
         ip      = []    # import   conversion-list
@@ -33,18 +33,18 @@ class CsvConvert:
             # def_eof
             if len(def_line) < 1:
                 def_eof = True
+                
             def_line = def_line.rstrip('\n')
             d = def_line.split(';')
             # line valid ?
             if (len(d) == 5) and (d[2].rstrip() != ''):
                 # Extract Details for: 
-                # Date
+                #   Date
                 if  int(d[0]) == 0:     date = d[4]
-                # PayCode
+                #   PayCode
                 elif int(d[0]) == 1:    code = d[4]
-                # Sign (Amount)
+                #   Sign (Amount)
                 elif int(d[0]) == 5:    posneg = d[4]
-                
                 # create conversion-lists        
                 hb.append(int(d[0]))
                 ip.append(int(d[2]))
@@ -53,7 +53,7 @@ class CsvConvert:
         print ip
         
         # parse import.csv
-        n = 0                                   # (import line counter)
+        n = 1                                   # (import line counter)
         imp_eof = False
         acc_old = ''
         bank = {                                # All known accounts
@@ -106,19 +106,21 @@ class CsvConvert:
                     
                     # conversions
                     # "date"
-                    if h == 0:                        
+                    if (h == 0):                        
                         dd = date.find('DD')
                         mm = date.find('MM')
                         yy = date.find('YYYY')
                         rec_new = '%s-%s-%s'% (rec[b][dd:(dd+2)],rec[b][mm:(mm+2)],rec[b][yy:(yy+4)])
                     # "paycode"
                     if (code != '') and (h == 1):
-                        k = 0
-                        cd = code.split(',')
-                        offset = len(cd)/2
-                        for c in cd:
-                            if c == rec[b]:     rec_new = cd[k + offset]
-                            k += 1
+                        if code.find(rec[b]) < 0:   rec_new = ''    # Unknown code (Not in .def)
+                        else:
+                            k = 0
+                            cd = code.split(',')
+                            offset = len(cd)/2
+                            for c in cd:
+                                if c == rec[b]:     rec_new = cd[k + offset]
+                                k += 1                            
                     # "amount"
                     if (h == 5):
                         rec_new = ''
@@ -145,31 +147,35 @@ class CsvConvert:
                                 am = am.replace('.','')
                                 am = '%s.00'% am
                         # Sign
-                        if (posneg != ''):
+                        elif (posneg != ''):
                             pn = posneg.split(',')
                             if   rec[b] == pn[0]:   am = '-%s'% am
                             elif rec[b] == pn[1]:   pass
-                        rec_new = am
+                            rec_new = am
 
                     # assemble output-record
                     # skip if import.csv does not have this field: [-1]
                     if (ip[j] != -1):
-                        # date
+                        # [date]
                         if (h == 0):
                             record = rec_new
-                        # paymode    
+                        # [paymode]    
                         elif (h == 1):
-                            record = '%s;%s'% (record,rec_new)
-                        # info (offset-account)
+                            if rec_new != '':
+                                record = '%s;%s'% (record,rec_new)
+                            else:
+                                print '>>>>> Unknown code: ' + rec[b]
+                                logfile_.write('Unknown Paycode "%s" in record[%s]\n'% (rec[b],n))
+                        # [info -> offset-account]
                         elif (h == 2):
                             if (len(rec_new) != 0) and (int(rec_new) > 0):
                                 record = '%s;%s'% (record,rec_new)
                             else:
                                 record = '%s;'% record
-                        # payee
+                        # [payee]
                         elif (h == 3):
                             record = '%s;%s'% (record,rec_new)
-                        # description
+                        # [description]
                         elif (h == 4):
                             # Combine multiple "not empty" description Bank-records
                             if (hb_old == h):
@@ -185,18 +191,21 @@ class CsvConvert:
                                 # empty
                                 else:
                                     record = '%s;'%  record
-                        # amount
+                        # [amount]
                         elif (h == 5):
                             if (len(rec_new) != 0):
                                 record = '%s;%s'% (record,rec_new)
                             else:
                                 pass
-                        # category
+                        # [category]
                         elif (h == 6):
                             record = '%s;%s'% (record,rec_new)
-                        # NOT IMPLEMENTED IN HOMEBANK
-                        #       acc_old indicating new account (multi accounts import)
+                        # [account]    
+                        # NOT IMPLEMENTED IN HOMEBANK CSV-import
+                        #       multi accounts import: sequential account listing
+                        #       at top of accountlist extra line with account-name
                         #       format: account-number; "Homebank account-name"
+                        #       Needs Homebank 4.3 "import.c" adaptation ((c)2010)
                         elif (h == 7):
                             # make banknumber 10 char.long
                             if len(rec_new) < 10:
@@ -204,20 +213,22 @@ class CsvConvert:
                             # detect next account
                             if (rec_new != acc_old):
                                 acc_old = rec_new
-                                print rec_new,
                                 try:
                                     print bank[rec_new]
                                     tofile_.write('%s;%s\n'% (rec_new,bank[rec_new]))
                                 except KeyError:
                                     print 'Unknown/New account number'
                                     tofile_.write('%s;%s\n'% (rec_new,'New_account'))
-                        # NOT IMPLEMENTED IN HOMEBANK
-                        #       Balance before/after transaction ?
+                        # [balance]            
+                        # NOT IMPLEMENTED IN HOMEBANK CSV-import
+                        #       Listed Balance value before/after transaction ?
+                        #       Needs further investigation and Homebank 4.3 "import.c" adaptation
                         elif (h == 8):
                             print float(rec_new) + float(am)
-                                
+
+                    # No field available [-1]
                     elif (h < 7):
-                        record = '%s;'% record          # -> empty field
+                        record = '%s;'% record
                         
                 print record
                 tofile_.write('%s\n'% record)
@@ -226,12 +237,13 @@ class CsvConvert:
       
 class convert:
     """ Converts <unknown> csv-file """
-    # 1- where are the csv-files?   =>  commandline
+    # 1- where are the csv-files?                   =>  commandline
     # 2- Convert via definition-file 
-    # 3- what is csv-separator comma, semicolon ?
+    # 3- what is csv-separator: comma, semicolon ?
     # 4- Skip "corrupted" bank-file records
-    # 5- include acc_old with account number in output.csv
-    # 6- Log all conversion process-items
+    # 5- Include multi-accounts in output.csv       (NOT IMPLEMENTED IN HOMEBANK CSV-import)
+    # 6- Include balance info in output.csv         (NOT IMPLEMENTED IN HOMEBANK CSV-import)
+    # 7- Log all conversion process-items
       
     def __init__(self):
     
@@ -240,20 +252,30 @@ class convert:
                  [output.csv] = (homebank.csv)  file to be created\n\
                  [import.def] = ("bank".def)    definition-file "bank" <> "Homebank"\n\n\
                  Logging conversion process -> log.txt\n'
-        homebank = ['date','paymode','info','payee','description','amount','category']
+        homebank = ['date','paymode','info','payee','description','amount','category']  # 4.3
         
         if (len(sys.argv) != 4):
             print error
             exit(1)
 
+        if os.path.isfile(sys.argv[1]):
+            fromfile = open(sys.argv[1],'r')
+        else:
+            print '\nInput error!____ import.csv: ' + sys.argv[1] + ' does not exist / cannot be opened !!\n'
+            exit(1)
+            
+        try:
+            tofile   = open(sys.argv[2],'w')
+        except:
+            print '\nInput error!____ output.csv: ' + sys.argv[2] + ' cannot be created !!\n'
+            exit(1)
+            
         if os.path.isfile(sys.argv[3]):
             deffile = open(sys.argv[3],'r')
         else: 
-            print error
+            print '\nInput error!____ import.def: ' + sys.argv[3] + ' does not exist / cannot be opened !!\n'
             exit(1)
             
-        fromfile = open(sys.argv[1],'r')
-        tofile   = open(sys.argv[2],'w')
         logfile  = open('log.txt', 'w')
         
         logfile.write('Opening import     %s\n' % fromfile)
@@ -262,7 +284,7 @@ class convert:
 
         CsvConvert(fromfile, deffile, tofile, logfile)
                 
-        logfile.write('Closing output file\n')
+        logfile.write('Closing files\n')
         logfile.close()
         fromfile.close()
         tofile.close()

@@ -1,9 +1,9 @@
-First attempt creating a universal Homebank csv import converter (c)Ton 4-04-2011
+First attempt creating a universal Homebank(4.3) csv import converter (c)Ton 4-04-2011
 ================================================================================================
 Before you can use this script, you have to create a definition-file (see short manual below)
 Format import-csv-file-record homebank  = ['date','paymode','info','payee','description','amount','category']
 Format import-csv-file-record bank      = [any number of fields & field-position in record]
-Record field seperation-token can be comma or semicolon [,.]
+                                          Record field seperation-token can be comma or semicolon [,;]
 
 In terminal on command-line type ./convert.py [import.csv] [output.csv] [import.def]
 
@@ -22,7 +22,7 @@ Homebank definition file contains 5 columns:
 Column:
 [1] = (H) Homebank field pos.       !! field-number = [0-8]     >>> do NOT change <<<
 [2] =     Homebank field name       !! as in Homebank           >>> do NOT change <<<
-[3] = (B) Bankfile field pos.       !! field-number = [0-N], does-not-exist = [-1]
+[3] = (B) Bankfile field pos.       !! field-number = [0-N],    >>> does-not-exist = [-1] <<<<
 [4] =     Bankfile field name       !! as in Bank-file
 [5] =     Bankfile field details    !! NO semicolons allowed
 
@@ -48,7 +48,7 @@ Multi definitions-lines(rows) per field are possible, e.g. payee,description,amo
 Example-definition-file:
 --------------------------------------------------------------------------------------------
 H  <Homebank>    B    <"Bank">        <Bank-file>
-#___<field>___________<field>_______<field-details>______________________________________________________________________
+#___<field>___________<field>_______<field-details>_________________________________________
 0;date          ;2 ;Curr.date      ;YYYYMMDD
 1;paymode       ;8 ;Booking-Code   ;ga,gb,cb,sb,tb,ba,ck,eb,ei,ma,nb,bg,ac,id,tg,kh,db,3,3,4,4,5,6,6,7,7,7,7,8,8,8,8,9,10
 2;info          ;5 ;Offset-account ;
