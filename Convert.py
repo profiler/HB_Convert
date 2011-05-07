@@ -24,11 +24,15 @@ class CsvConvert:
     """ reads and converts [import.csv] with [definition.def] rules """
     
     def __init__(self, fromfile_, deffile_, tofile_, logfile_):
-        # read definition-file and create conversion-lists
+    
+        # parse definition-file and create conversion-lists
         def_eof = False
-        hb      = []    # homebank conversion-list
-        ip      = []    # import   conversion-list
+        n  = 0                                  # (definition line counter)
+        d_old   = ''
+        hb = []                                 # homebank conversion-list
+        ip = []                                 # import   conversion-list
         while not def_eof:
+            n += 1                              # line count
             def_line = deffile_.readline()
             # def_eof
             if len(def_line) < 1:
@@ -36,24 +40,40 @@ class CsvConvert:
                 
             def_line = def_line.rstrip('\n')
             d = def_line.split(';')
-            # line valid ?
-            if (len(d) == 5) and (d[2].rstrip() != ''):
-                # Extract Details for: 
-                #   Date
-                if  int(d[0]) == 0:     date = d[4]
-                #   PayCode
-                elif int(d[0]) == 1:    code = d[4]
-                #   Sign (Amount)
-                elif int(d[0]) == 5:    posneg = d[4]
-                # create conversion-lists        
-                hb.append(int(d[0]))
-                ip.append(int(d[2]))
+            # definition line valid ?
+            if (len(d) == 5):
+                # definition line contains in already defined field -> improper "not-in-use" data ?
+                if (d_old == d[0]) and (int(d[2]) < 0):
+                    print 'Error in definition-file-record[%s]: field already defined !'% n
+                    logfile_.write('Error in definition-file-record[%s]: field already defined ! \n'% n)
+                else:
+                    # Extract Details for Date,Paycode,Sign:
+                    if (d[2].rstrip() != ''):
+                        #   Date
+                        if  int(d[0]) == 0:     date = d[4]
+                        #   PayCode
+                        elif int(d[0]) == 1:
+                            code = d[4]
+                            # content needs checking
+                            cod_ = (d[4].split(','))
+                            cod_l = len(cod_)
+                            if (len(cod_)-(len(cod_)/2)*2) != 0:
+                                print 'Error in definition-file: paycode detail-data Incorrect, Not enough items'
+                                logfile_.write('Error in definition-file: paycode detail-data Incorrect, Not enough items \n')
+                        #   Sign (Amount)
+                        elif int(d[0]) == 5:    posneg = d[4]
+                        
+                    # create conversion-lists        
+                    hb.append(int(d[0]))
+                    ip.append(int(d[2]))
+
+                d_old = d[0]                    # remember curr. field-data
 
         print hb
         print ip
         
         # parse import.csv
-        n = 1                                   # (import line counter)
+        n = 0                                   # (import line counter)
         imp_eof = False
         acc_old = ''
         bank = {                                # All known accounts
@@ -89,7 +109,7 @@ class CsvConvert:
                     logfile_.write('Error in record[%s]: Field[%s] contains illegal "Separator" -> %s\n'% (n,i,rec[i]))
                 else:                    
                     rec[i] = rec[i].strip('"')
-
+            
             if (len(hb)>=len(rec)):
                 CsvConvert.fail = n                     # Error => Store record-/line-number
                 logfile_.write('Error in record[%s]: Field(s) missing\n'% n)
@@ -205,7 +225,7 @@ class CsvConvert:
                         #       multi accounts import: sequential account listing
                         #       at top of accountlist extra line with account-name
                         #       format: account-number; "Homebank account-name"
-                        #       Needs Homebank 4.3 "import.c" adaptation ((c)2010)
+                        #       Needs Homebank 4.3 "import.c" adaptation (TvT(c)2010)
                         elif (h == 7):
                             # make banknumber 10 char.long
                             if len(rec_new) < 10:
@@ -223,6 +243,7 @@ class CsvConvert:
                         # NOT IMPLEMENTED IN HOMEBANK CSV-import
                         #       Listed Balance value before/after transaction ?
                         #       Needs further investigation and Homebank 4.3 "import.c" adaptation
+                        # TODO  Needs Homebank 4.3 "import.c" adaptation
                         elif (h == 8):
                             print float(rec_new) + float(am)
 
