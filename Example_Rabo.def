@@ -1,24 +1,3 @@
-### Homebank definition file (5)columns:
-### Column
-### [1] = (H) Homebank field pos.       !! >>> do NOT change <<<
-### [2] =     Homebank field name       !! >>> do NOT change <<<
-### [3] = (B) Bankfile field pos.       !! field-number = [0-N], does-not-exist = [-1]
-### [4] =     Bankfile field name       !! as in Bank-file
-### [5] =     Bankfile field details    !! NO semicolons allowed
-### --------------------------------------------------------------------------   Examples:
-###  Date    (any  order):  4*[Y]ear,2*[M]onth,2*[D]ay -> seperation[-#%&*/]  -> [YYYY/MM/DD] [YYYY-MM-DD] [DD%MM%YYYY]
-###
-###  Amount (comes first):  (Amount without sign needs extra Amount_sign info) 
-###  Amount_sign (second):  [aA-zZ],[aA-zZ]            -> order [+,-]         -> [D,C] [Debet,Credit] [af,bij] [Neg,Pos]
-###
-###  Paymode (any lenght):  N*(Booking-code)  ,N*(Homebank-code)
-###                         [aA-zZ],..,[aA-zZ],[0-10],...,[0-10]              -> [ga,gb,cb,..,tg,kh,db,3,3,4,..,8,9,10]
-### --------------------------------------------------------------------------------------------
-###  General limitations: Amount-format CAN have grouping-token[,.] and decimal-token[.,]
-###                       integers[N*= any number], fraction[None .. 2= max]
-### --------------------------------------------------------------------------------------------
-H  <Homebank>    B    <"Bank">        <Bank-file>
-#___<field>___________<field>_______<field-details>______________________________________________________________________
 0;date          ;2 ;Curr.date      ;YYYYMMDD
 1;paymode       ;8 ;Booking-Code   ;ga,gb,cb,sb,tb,ba,ck,eb,ei,ma,nb,bg,ac,id,tg,kh,db,3,3,4,4,5,6,6,7,7,7,7,8,8,8,8,9,10
 2;info          ;5 ;Offset-account ;
@@ -34,4 +13,4 @@ H  <Homebank>    B    <"Bank">        <Bank-file>
 6;category      ;-1;               ;
 7;*account      ;0 ;Account        ;
 8;*balance      ;-1;               ;
-#
+

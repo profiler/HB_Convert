@@ -3,7 +3,7 @@
 #  Copyright (c)Ton van Twuyver @ <profiler1234@gmail.com>          Last updated 29-04-2011
 #
 #  This script is written with "HomeBank" in mind. <http://homebank.free.fr>
-#  Purpose:    to convert any Bank-file.csv in Homebank.csv by means of a definition-file.
+#  Purpose:    to convert any Bank-file.csv into Homebank.csv by means of a definition-file.
 #  
 #  Convert.py is written in Python(2.6) and free software,
 #  It is distributed in the hope that it will be useful, but comes WITHOUT ANY WARRANTY;
@@ -54,9 +54,10 @@ class CsvConvert:
                         #   PayCode
                         elif int(d[0]) == 1:
                             code = d[4]
-                            # content needs checking
+                            # Code content needs checking
                             cod_ = (d[4].split(','))
                             cod_l = len(cod_)
+                            # should have even-amount of items !!
                             if (len(cod_)-(len(cod_)/2)*2) != 0:
                                 print 'Error in definition-file: paycode detail-data Incorrect, Not enough items'
                                 logfile_.write('Error in definition-file: paycode detail-data Incorrect, Not enough items \n')
@@ -119,6 +120,7 @@ class CsvConvert:
                 hb_old  = 0
                 record  = ''
                 am = ''
+                n  = 0
                 for j in range(len(hb)):
                     h = hb[j]        
                     b = ip[j]
@@ -160,7 +162,7 @@ class CsvConvert:
                             # xxx.xxx.xxx,xx    dot-grouping,   comma-decimal
                             elif (frac2 < 4) and (frac2 > 0):
                                 am = am.replace('.','')
-                                am = am.replace(',','.')    # harmonize decimal-point
+                                am = am.replace(',','.')        # harmonize decimal-point
                             # grouping & No fraction / decimal-point
                             else:
                                 am = am.replace(',','')
@@ -171,7 +173,11 @@ class CsvConvert:
                             pn = posneg.split(',')
                             if   rec[b] == pn[0]:   am = '-%s'% am
                             elif rec[b] == pn[1]:   pass
-                            rec_new = am
+                        # Multiline def.?
+                        if posneg == '': rec_new = am           # Single line def.
+                        else:
+                            n += 1
+                            if n > 1:    rec_new = am           # Dual   line def.
 
                     # assemble output-record
                     # skip if import.csv does not have this field: [-1]
