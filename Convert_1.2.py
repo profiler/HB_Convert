@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
-#  Copyright (c)Ton van Twuyver @ <profiler1234@gmail.com>          Last updated 29-04-2011
+#  Convert_v1.2
+#  Copyright (c)Ton van Twuyver @ <profiler1234@gmail.com>
 #
 #  This script is written with "HomeBank" in mind. <http://homebank.free.fr>
 #  Purpose:    to convert any Bank-file.csv into Homebank.csv by means of a definition-file.
@@ -17,6 +18,7 @@
 #
 import os
 import sys
+import re
 
 #### CsvConvert####################################
 
@@ -31,6 +33,13 @@ class CsvConvert:
         d_old   = ''
         hb = []                                 # homebank conversion-list
         ip = []                                 # import   conversion-list
+        
+        date = ''
+        code = ''
+        posneg = ''
+        hd_acc_ln = []
+        hd_bal_ln = []
+        hd_len = 0
         while not def_eof:
             n += 1                              # line count
             def_line = deffile_.readline()
@@ -49,27 +58,33 @@ class CsvConvert:
                 else:
                     # Extract Details for Date,Paycode,Sign:
                     if (d[2].rstrip() != ''):
-                        #   Date
+                        # Date
                         if  int(d[0]) == 0:     date = d[4]
-                        #   PayCode
+                        # PayCode
                         elif int(d[0]) == 1:
                             code = d[4]
-                            # Code content needs checking
+                            # Code-detail content needs checking:
+                            #   starts with N-items of bank-code, followed by N-items of homebank-code
+                            #   so, the total should always be an even-amount of items !!
                             cod_ = (d[4].split(','))
-                            cod_l = len(cod_)
-                            # should have even-amount of items !!
-                            if (len(cod_)-(len(cod_)/2)*2) != 0:
-                                print 'Error in definition-file: paycode detail-data Incorrect, Not enough items'
-                                logfile_.write('Error in definition-file: paycode detail-data Incorrect, Not enough items \n')
-                        #   Sign (Amount)
+                            Even = len(cod_)-(len(cod_)/2)*2    # this is zero if Even
+                            if (Even != 0):
+                                print 'Error in definition-file: paycode detail-data ncorrect, Not correct amount of items'
+                                logfile_.write('Error in definition-file: paycode detail-data Incorrect, Not correct amount of items \n')
+                        # Sign (Amount)
                         elif int(d[0]) == 5:    posneg = d[4]
-                        
+                    # Extract Details for Header [line-number,item]
+                    if int(d[2].rstrip()) <= -2:
+                        # store last header-line
+                        hd_len = abs(int(d[2]))
+                        # account-number
+                        if int(d[0]) == 7:      hd_acc_ln = d[4].split(',')
+                        # balance
+                        elif int(d[0]) == 8:    hd_bal_ln = d[4].split(',')
                     # create conversion-lists        
                     hb.append(int(d[0]))
                     ip.append(int(d[2]))
-
                 d_old = d[0]                    # remember curr. field-data
-
         print hb
         print ip
         
@@ -85,7 +100,7 @@ class CsvConvert:
             n += 1                              # line count
             line = fromfile_.readline()
             # eof (import)
-            if len(line) <= 3:
+            if len(line) == 0:
                 imp_eof = True
                 break
                 
@@ -100,8 +115,26 @@ class CsvConvert:
             else:                               # comma
                 rec = line.split(',')
                 
+            # Header present (ONLY for single file)
+            if hd_len > 0:
+                # accountnumber
+                if n == int(hd_acc_ln[0]):
+                    n_ac = int(hd_acc_ln[1])
+                    # filter out only digits (account-number)
+                    # and make accountnumber 10 char.long
+                    ac = re.sub('[^0-9]','',rec[n_ac])
+                    if len(ac) < 10:   ac = (10 - len(ac))*'0' + ac
+                    print ac, bank[ac]
+                    tofile_.write('%s;%s\n'% (ac,bank[ac]))
+                # balance (for future use)
+                if n == int(hd_bal_ln[0]):
+                    n_bc = int(hd_bal_ln[1])
+                    bc = rec[n_bc]
+                    bc = ParseAmount(bc)
+                    print float(bc)
+
             # Caution: some files can contain comma's/semicolons within quotes !!!!!!
-            # Check field-content for amount of quotes [0 or 2]
+            # Check field-content for correct amount of quotes [0 or 2]
             CsvConvert.fail = 0
             for i in range(len(rec)):
                 d = len(rec[i])-len(rec[i].replace('"',''))
@@ -110,23 +143,24 @@ class CsvConvert:
                     logfile_.write('Error in record[%s]: Field[%s] contains illegal "Separator" -> %s\n'% (n,i,rec[i]))
                 else:                    
                     rec[i] = rec[i].strip('"')
-            
+
+            # Check if account-record-length, log only error outside header
             if (len(hb)>=len(rec)):
                 CsvConvert.fail = n                     # Error => Store record-/line-number
-                logfile_.write('Error in record[%s]: Field(s) missing\n'% n)
+                if (n > hd_len):
+                    logfile_.write('Error in record[%s]: Field(s) missing\n'% n)
             
             if (CsvConvert.fail == 0):                  # >>>>> skip record with error !
                 # Assemble Homebank records
                 hb_old  = 0
                 record  = ''
                 am = ''
-                n  = 0
+                m  = 0
                 for j in range(len(hb)):
                     h = hb[j]        
                     b = ip[j]
                     rec_new = rec[b]
-                    
-                    # conversions
+                    # __conversions
                     # "date"
                     if (h == 0):                        
                         dd = date.find('DD')
@@ -149,39 +183,23 @@ class CsvConvert:
                         # Amount
                         if (am == ''):
                             am = rec[b]
-                            # integers(any number).fraction(0..2) 
-                            # find decimal point
-                            frac1 =len(am)-am.find('.')
-                            frac2 =len(am)-am.find(',')
-                            # No grouping & No fraction / decimal-point
-                            if (frac1 == frac2):
-                                am = '%s.00'% am
-                            # xxx,xxx,xxx.xx    comma-grouping, dot-decimal
-                            elif (frac1 < 4) and (frac1 > 0):
-                                am = am.replace(',','')
-                            # xxx.xxx.xxx,xx    dot-grouping,   comma-decimal
-                            elif (frac2 < 4) and (frac2 > 0):
-                                am = am.replace('.','')
-                                am = am.replace(',','.')        # harmonize decimal-point
-                            # grouping & No fraction / decimal-point
-                            else:
-                                am = am.replace(',','')
-                                am = am.replace('.','')
-                                am = '%s.00'% am
+                            am = ParseAmount(am)
+                            if not ParseAmount.valid:
+                                print 'Error in record[%s]: Amount-Field corrupt\n'% n
+                                logfile_.write('Error in record[%s]: Amount-Field corrupt\n'% n)
+                                break
                         # Sign
-                        elif (posneg != ''):
+                        elif (posneg != ''):                    # Dualline def.
                             pn = posneg.split(',')
                             if   rec[b] == pn[0]:   am = '-%s'% am
                             elif rec[b] == pn[1]:   pass
-                        # Multiline def.?
+                            rec_new = am
+                        # No-sign
                         if posneg == '': rec_new = am           # Single line def.
-                        else:
-                            n += 1
-                            if n > 1:    rec_new = am           # Dual   line def.
-
+                        
                     # assemble output-record
-                    # skip if import.csv does not have this field: [-1]
-                    if (ip[j] != -1):
+                    # skip if this field indicates [Not used] or [Header]
+                    if (ip[j] >= 0):
                         # [date]
                         if (h == 0):
                             record = rec_new
@@ -216,7 +234,7 @@ class CsvConvert:
                                     record = '%s;%s'% (record,rec_new)
                                 # empty
                                 else:
-                                    record = '%s;'%  record
+                                    record = '%s;'% record
                         # [amount]
                         elif (h == 5):
                             if (len(rec_new) != 0):
@@ -233,14 +251,13 @@ class CsvConvert:
                         #       format: account-number; "Homebank account-name"
                         #       Needs Homebank 4.3 "import.c" adaptation (TvT(c)2010)
                         elif (h == 7):
-                            # make banknumber 10 char.long
-                            if len(rec_new) < 10:
-                                rec_new = (10 - len(rec_new))*'0' + rec_new
+                            # make accountnumber 10 char.long
+                            if len(rec_new) < 10:   rec_new = (10 - len(rec_new))*'0' + rec_new
                             # detect next account
                             if (rec_new != acc_old):
                                 acc_old = rec_new
                                 try:
-                                    print bank[rec_new]
+                                    print rec_new,bank[rec_new]
                                     tofile_.write('%s;%s\n'% (rec_new,bank[rec_new]))
                                 except KeyError:
                                     print 'Unknown/New account number'
@@ -251,14 +268,49 @@ class CsvConvert:
                         #       Needs further investigation and Homebank 4.3 "import.c" adaptation
                         # TODO  Needs Homebank 4.3 "import.c" adaptation
                         elif (h == 8):
+                            # For future use, now just print available Balance-value ....
                             print float(rec_new) + float(am)
 
-                    # No field available [-1]
-                    elif (h < 7):
+                    # Field not available [-1]
+                    elif (h < 7) and (ip[j] == -1):
                         record = '%s;'% record
                         
                 print record
                 tofile_.write('%s\n'% record)
+
+#### ParseAmount ####################################
+
+def ParseAmount(am):
+    """ check and harmonize grouping and decimal-point
+          outputs amount and valid-flag(true/false)
+    """
+
+    ParseAmount.valid = True
+    # filter
+    am = re.sub('[^0-9,.]','',am)
+    # integers(any number).fraction(0..2) 
+    # find decimal point
+    frac1 =len(am)-am.find('.')
+    frac2 =len(am)-am.find(',')
+    # No grouping & No fraction / decimal-point
+    if (frac1 == frac2):
+        am = '%s.00'% am
+    # xxx,xxx,xxx.xx    comma-grouping, dot-decimal
+    elif (frac1 < 4) and (frac1 > 0):   
+        am = am.replace(',','')
+    # xxx.xxx.xxx,xx    dot-grouping,   comma-decimal
+    elif (frac2 < 4) and (frac2 > 0):
+        am = am.replace('.','')
+        am = am.replace(',','.')        # harmonize decimal-point
+    # grouping & No fraction / decimal-point
+    else:
+        am = am.replace(',','')
+        am = am.replace('.','')
+        am = '%s.00'% am
+    # check validity result
+    if (len(am) - am.find('.')) != 3:
+        ParseAmount.valid = False
+    return am
                 
 #### Convert ##########################################
       
