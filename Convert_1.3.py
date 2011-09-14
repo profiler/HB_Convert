@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  Convert_v1.2
+#  Convert_v1.3
 #  Copyright (c)Ton van Twuyver @ <profiler1234@gmail.com>
 #
 #  This script is written with "HomeBank" in mind. <http://homebank.free.fr>
@@ -212,7 +212,13 @@ class CsvConvert:
                                 logfile_.write('Unknown Paycode "%s" in record[%s]\n'% (rec[b],n))
                         # [info -> offset-account]
                         elif (h == 2):
-                            if (len(rec_new) != 0) and (int(rec_new) > 0):
+                            # filter out only digits (account-number)
+                            # and make accountnumber 10 char.long
+                            rec_new = re.sub('[^0-9]','',rec_new)
+                            if len(rec_new) < 10:   rec_new = (10 - len(rec_new))*'0' + rec_new
+
+                            if (int(rec_new) > 0):
+                            # if (len(rec_new) != 0) and (int(rec_new) > 0):
                                 record = '%s;%s'% (record,rec_new)
                             else:
                                 record = '%s;'% record
@@ -251,7 +257,9 @@ class CsvConvert:
                         #       format: account-number; "Homebank account-name"
                         #       Needs Homebank 4.3 "import.c" adaptation (TvT(c)2010)
                         elif (h == 7):
-                            # make accountnumber 10 char.long
+                            # filter out only digits (account-number)
+                            # and make accountnumber 10 char.long
+                            rec_new = re.sub('[^0-9]','',rec_new)
                             if len(rec_new) < 10:   rec_new = (10 - len(rec_new))*'0' + rec_new
                             # detect next account
                             if (rec_new != acc_old):
