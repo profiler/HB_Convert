@@ -320,7 +320,8 @@ class CsvConvert:
                             # TODO  Needs Homebank 4.3 "import.c" adaptation
                             elif (h == 8):
                                 # For future use, now just print available Balance-value ....
-                                print float(rec_new) + float(am)
+                                bal = re.sub('[^0-9.-]','',rec_new)
+                                print float(bal) + float(am)
 
                         # Field not available [-1]
                         elif (h < 7) and (ip[j] == -1):
@@ -338,7 +339,7 @@ def ParseAmount(am):
 
     ParseAmount.valid = True
     # filter
-    am = re.sub('[^0-9,.]','',am)
+    am = re.sub('[^0-9,.-]','',am)
     # integers(any number).fraction(0..2) 
     # find decimal point
     frac1 =len(am)-am.find('.')
