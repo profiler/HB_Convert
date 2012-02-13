@@ -8,7 +8,7 @@ Format import-csv-file-record homebank  = ['date','paymode','info','payee','desc
 Format import-csv-file-record bank      = [any number of fields & field-position in record]
                                           Record field seperation-token can be comma or semicolon [,;]
 
-Run in terminal, on command-line type     ./convert.py [import.csv] [output.csv] [import.def]
+Run in terminal, on command-line type     ./Convert_x.x.x.py [import.csv] [output.csv] [import.def]
 *
 [Leganda]        [import.csv] = ("bank".csv)        file exported from bank
                  [output.csv] = ("homebank".csv)    file to be created

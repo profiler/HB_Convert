@@ -156,7 +156,7 @@ class CsvConvert:
                             ln = len(line)
                             q1 = line.find('"')
                             q2 = line.find('"',q1+1)
-                            print q1,q2
+                            #print q1,q2
                             if (q1 > 0) and (q2 > 0):
                                 l1 = line[q1:q2+1].replace(",",'.')
                                 line = line[0:q1] + l1.replace('"','') + line[q2+1:ln]
@@ -194,7 +194,7 @@ class CsvConvert:
                         logfile_.write('Error in record[%s]: Field(s) missing\n'% n)
                 
                 if (CsvConvert.fail == 0):                  # >>>>> skip record with error !
-                    # Assemble Homebank records
+                    # Construct Homebank records
                     hb_old  = 0
                     record  = ''
                     am = ''
@@ -202,7 +202,7 @@ class CsvConvert:
                         h = hb[j]        
                         b = ip[j]
                         rec_new = rec[b]
-                        # __conversions
+                        # ________________conversions
                         # "date"
                         if (h == 0):                        
                             dd = date.find('DD')
@@ -210,15 +210,25 @@ class CsvConvert:
                             yy = date.find('YYYY')
                             rec_new = '%s-%s-%s'% (rec[b][dd:(dd+2)],rec[b][mm:(mm+2)],rec[b][yy:(yy+4)])
                         # "paycode"
-                        if (code != '') and (h == 1):
-                            if code.find(rec[b]) < 0:   rec_new = ''    # Unknown code (Not in .def)
-                            else:
-                                k = 0
-                                cd = code.split(',')
-                                offset = len(cd)/2
-                                for c in cd:
-                                    if c == rec[b]:     rec_new = cd[k + offset]
-                                    k += 1                            
+                        if (h == 1):
+                            rec_new = ''
+                            # empty code
+                            if (code == ''):
+                                print '>>>>> Empty Paycode: ' + rec[b]
+                                logfile_.write('Empty Paycode "%s" in record[%s]\n'% (rec[b],n))
+                            else:    
+                                # Unknown paycode (Not in .def)
+                                if code.find(rec[b]) < 0:
+                                    print '>>>>> Unknown Paycode: ' + rec[b]
+                                    logfile_.write('Unknown Paycode "%s" in record[%s]\n'% (rec[b],n))
+                                # Known paycode (present in def)
+                                else:
+                                    k = 0
+                                    cd = code.split(',')
+                                    offset = len(cd)/2
+                                    for c in cd:
+                                        if c == rec[b]:     rec_new = cd[k + offset]
+                                        k += 1                                    
                         # "amount"
                         if (h == 5):
                             #print "<>", rec[b]
@@ -240,7 +250,7 @@ class CsvConvert:
                             # No-sign
                             if posneg == '': rec_new = am           # Single line def.
                             
-                        # assemble output-record
+                        # ___________________assemble output-record
                         # skip if this field indicates [Not used] or [Header]
                         if (ip[j] >= 0):
                             # [date]
@@ -248,11 +258,7 @@ class CsvConvert:
                                 record = rec_new
                             # [paymode]    
                             elif (h == 1):
-                                if rec_new != '':
-                                    record = '%s;%s'% (record,rec_new)
-                                else:
-                                    print '>>>>> Unknown code: ' + rec[b]
-                                    logfile_.write('Unknown Paycode "%s" in record[%s]\n'% (rec[b],n))
+                                record = '%s;%s'% (record,rec_new)
                             # [info -> offset-account]
                             elif (h == 2):
                                 # filter out only digits (account-number)
@@ -378,7 +384,7 @@ class convert:
       
     def __init__(self):
     
-        error = 'Input error!____ Type ./convert.py [import.csv] [output.csv] [import.def] ____\n\n\
+        error = 'Input error!____ Type ./Convert_x.x.x.py [import.csv] [output.csv] [import.def] ____\n\n\
                  [import.csv] = ("bank".csv)    file exported from bank\n\
                  [output.csv] = (homebank.csv)  file to be created\n\
                  [import.def] = ("bank".def)    definition-file "bank" <> "Homebank"\n\n\
